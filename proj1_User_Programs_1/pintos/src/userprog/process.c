@@ -21,59 +21,6 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
-//// user define start
-void argument_stack(char* file_name, void** esp) {
-	const int MAX_ARG = 10;
-	const int MAX_LEN = 30;
-	char argument[MAX_ARG][MAX_LEN];
-	char *token, *save_ptr;
-	int i, j, len, total_len = 0, arg_cnt = 0;
-
-	// parsing
-	for (token = strtok_r(file_name, "' '\n", &save_ptr);
-		token != NULL; token = strtok_r(NULL, "' '\n", &save_ptr)) {
-		strlcpy(argument[arg_cnt], token, MAX_LEN);
-		arg_cnt++;
-	}
-
-	//// argv string push
-	for (i = arg_cnt - 1; i > -1; i--) {
-		len = strlen(argument[i]);
-		total_len += len + 1;
-		for (j = len; j > -1; j--) {
-			*esp = *esp - 1;
-			**(char**)esp = argument[i][j];
-		}
-	}
-
-	//// word align
-	if (total_len % 4 != 0) {
-		*esp = *esp - (4 - (total_len % 4));
-	}
-	*esp = *esp - 4;
-	**(uint32_t**)esp = 0;
-
-	//// argv string address push
-	for (i = arg_cnt - 1; i > -1; i--) {
-		*esp = *esp - 4;
-		**(uint32_t**)esp = argument[i];
-	}
-
-	//// argv address push
-	*esp = *esp - 4;
-	**(uint32_t**)esp = *esp + 4;
-
-	//// argc push
-	*esp = *esp - 4;
-	**(uint32_t**)esp = arg_cnt;
-
-	//// return address
-	*esp = *esp - 4;
-	**(uint32_t**)esp = 0;
-	
-}
-//// user define end
-
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -92,14 +39,13 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
-  //// original
-  //// tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-  //// user define start
-  char* token, * save_ptr;
-  token = strtok_r(file_name, " ", &save_ptr);
-  tid = thread_create(token, PRI_DEFAULT, start_process, fn_copy);
-	printf("%s %s\n", token, fn_copy);
-  //// uesr define end
+  //tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+
+	//// user define start
+	char *token, *save_ptr;
+	token = strtok_r(file_name, " ", &save_ptr);
+	tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+	//// user define end
 
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
@@ -120,20 +66,7 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-	success = load(file_name, &if_.eip, &if_.esp);
-
-	//// user define start
-	char *token, *save_ptr, *fn_copy;
-	fn_copy = palloc_get_page(0);
-	strlcpy(fn_copy, file_name, PGSIZE);
-	token = strtok_r(fn_copy, " ", &save_ptr);
-	success = load(token, &if_.eip, &if_.esp);
-
-  if (success) {
-	  argument_stack(file_name, &if_.esp);
-	  //hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
-  }
-  //// user defined end
+  success = load (file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -159,16 +92,12 @@ start_process (void *file_name_)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
-
-////////////////////////////////////////////////
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-	int i;
-	for (i = 0; i < 1000000000; i++);
-  return -1;
+  while (1);
+	return -1;
 }
-///////////////////////////////////////////////////
 
 /* Free the current process's resources. */
 void
@@ -284,6 +213,12 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
+
+//// user define start
+#define MAX_ARG	10
+#define MAX_LEN 30
+//// user define end
+
 bool
 load (const char *file_name, void (**eip) (void), void **esp) 
 {
@@ -299,6 +234,22 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
+
+	//// user define start
+	/* parse file name */
+	char argv[MAX_ARG][MAX_LEN];
+	char *token, *save_ptr;
+	int arg_idx, argc = 0;
+
+	for (token = strtok_r(file_name, "' '\n", &save_ptr);
+		token != NULL; token = strtok_r(NULL, "' '\n", &save_ptr)) {
+		arg_idx = argc;
+		strlcpy(argv[arg_idx], token, MAX_LEN);
+		//printf("argv[%d]: %s\n", arg_idx, argv[arg_idx]);
+		argc++;
+	}
+	//printf("%d\n", argc);
+	//// user define end
 
   /* Open executable file. */
   file = filesys_open (file_name);
@@ -383,6 +334,53 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
+	
+	//// user define start
+	void *argv_addr[MAX_ARG], *tmp_esp = *esp;
+	int j, len, total_len = 0;
+
+	// push argv string (argv[i][j])
+	for (i = argc - 1; i > -1; i--) {
+		len = strlen(argv[i]);
+		total_len += (len + 1);
+		//argv_addr[i] = (uint32_t*)*esp;
+		for (j = len; j > -1; j--) {
+			*esp = *esp -1;
+			**(char**)esp = argv[i][j];
+		}
+		argv_addr[i] = (uint32_t*)*esp;
+	}
+
+	// word align
+	if (total_len % 4 != 0)
+		*esp = *esp - (4 - (total_len % 4));
+	
+	// push NULL (argv[argc])
+	*esp = *esp - 4;
+	//**(uint32_t**)esp = 0;
+	*(uint32_t *)(*esp) = 0;
+
+	// push argv address (argv[i])
+	for (i = argc - 1; i > -1; i--) {
+		*esp = *esp - 4;
+		*(uint32_t**)*esp = argv_addr[i];
+	}
+
+	// push argv
+	*esp = *esp - 4;
+	**(uint32_t**)esp = *esp + 4;
+
+	// push argc
+	*esp = *esp - 4;
+	**(uint32_t**)esp = argc;
+
+	// push return address
+	*esp = *esp - 4;
+	**(uint32_t**)esp = 0;
+
+	hex_dump(*esp, *esp, tmp_esp - *esp, true);
+	
+	//// user define end
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
