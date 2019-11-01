@@ -93,9 +93,25 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
-  while (1);
+	/*
+  int i, sum = 2;
+	for (i = 0; i < 1000000000; i++) {
+		sum += i;
+		return sum;
+	}
+	*/
+	// chil process의 프로세스 디스크립터 검색
+	// 예외 처리 발생시 -1 리턴 
+	// 자식 프로세스가 종료될 때까지 부모 프로세스 대기 (세마포어 이용)
+	// 자식 프로세스 디스크립터 삭제
+	// 자식 프로세스의 exit status 리턴
+
+	struct thread *cur = thread_current();
+	//sema_down(&(child_process->
+
+	while(1);
 	return -1;
 }
 
@@ -378,7 +394,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	*esp = *esp - 4;
 	**(uint32_t**)esp = 0;
 
-	hex_dump(*esp, *esp, tmp_esp - *esp, true);
+	//hex_dump(*esp, *esp, tmp_esp - *esp, true);
 	
 	//// user define end
 
