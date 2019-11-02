@@ -38,9 +38,17 @@ void check_address(void *addr) {
 	// kernel virtual address를 리턴, 매핑 x면 NULL 리턴
 	// is_user_vaddr()와 is_kernel_vaddr()는 각각 유저/커널 가상주소 확인
 	void *page = pagedir_get_page(thread_current()->pagedir, addr);
-
+	
+	if (!is_user_vaddr(addr))
+		exit(-1);
+	if (page == NULL)
+		exit(-1);
+	//if (addr < 0x08048000 || addr >= PHYS_BASE)
+	//	exit(-1);
+/*
 	if (!(page != NULL && is_user_vaddr(addr)))
 		exit(-1);
+*/
 }
 
 void get_argument(void *esp, int *arg, int count) {
@@ -54,6 +62,7 @@ void get_argument(void *esp, int *arg, int count) {
 		check_address(stack_ptr);
 		arg[i] = *(int *)stack_ptr;
 		stack_ptr += 4;
+		//printf("%s: %d\n", thread_current()->name, arg[i]);
 	}
 }
 
@@ -78,11 +87,6 @@ pid_t exec(const char *cmd_line) {
 	// create child process
 	// refer to process_execute() in userprog/process.c
 	// success: return pid // fail: return -1
-/*
-	if ( ) {
-		return 
-	}
-*/	
 	// 자식 프로세스를 생성하고 프로그램을 실행시키는 시스템 콜
 	// 프로세스 생성에 성공 시 생성된 프로세스에 pid 값을 반환, 실패 시 -1 반환
 	// 부모 프로세스는 생성된 자식 프로세스의 프로그램이 메모리에에 적재될 때까지 대기
@@ -92,6 +96,7 @@ pid_t exec(const char *cmd_line) {
 	sema_down(&(child->load_semaphore));
 
 	return (child->is_load_success == 1)? pid: -1;
+
 	//return process_execute(cmd_line);
 	//return -1;
 }
@@ -166,33 +171,33 @@ int sum_of_four_int (int a, int b, int c, int d) {
 
 
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
+syscall_handler (struct intr_frame *f) 
 {
   //printf ("system call!\n");
 
 	//// user define start
-	int arg[4];
-	void *esp = f->esp;
-	int syscall_num = *(int*)f->esp;
+	int arg[4], i;
+	void *sp = f->esp;
+	int syscall_num = *(int*)sp;
 	struct thread *cur = thread_current();
 	
 	//printf("system call number: %d\n", syscall_num);
-	check_address(esp);
+	check_address(sp);
 	//hex_dump(esp, esp, 100, true);
 	switch (syscall_num) {
 		case SYS_HALT://
 			halt();
 			break;
 		case SYS_EXIT://
-			get_argument(esp, arg, 1);
-			exit(arg[0]);
+			get_argument(sp, arg, 1);
+			exit((void *)arg[0]);
 			break;
 		case SYS_EXEC://
-			get_argument(esp, arg, 1);
+			get_argument(sp, arg, 1);
 			f->eax = exec((const char *)arg[0]);
 			break;
 		case SYS_WAIT://
-			get_argument(esp, arg, 1);
+			get_argument(sp, arg, 1);
 			f->eax = wait(arg[0]);
 			break;
 		case SYS_CREATE:
@@ -204,11 +209,11 @@ syscall_handler (struct intr_frame *f UNUSED)
 		case SYS_FILESIZE:
 			break;
 		case SYS_READ://
-			get_argument(esp, arg, 3);
+			get_argument(sp, arg, 3);
 			f->eax= read(arg[0], (void *)arg[1], (unsigned)arg[2]);
 			break;
 		case SYS_WRITE://
-			get_argument(esp, arg, 3);
+			get_argument(sp, arg, 3);
 			f->eax = write(arg[0], (const void *)arg[1], (unsigned)arg[2]);
 			break;
 		case SYS_SEEK:
@@ -218,11 +223,11 @@ syscall_handler (struct intr_frame *f UNUSED)
 		case SYS_CLOSE:
 			break;
 		case SYS_FIBONACCI:
-			get_argument(esp, arg, 1);
+			get_argument(sp, arg, 1);
 			f->eax = fibonacci(arg[0]);
 			break;
 		case SYS_SUM_OF_FOUR_INT:
-			get_argument(esp, arg, 4);
+			get_argument(sp, arg, 4);
 			f->eax = sum_of_four_int(arg[0], arg[1], arg[2], arg[3]);
 			break;
 		default:

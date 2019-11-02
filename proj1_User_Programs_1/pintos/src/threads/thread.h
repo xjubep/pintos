@@ -6,6 +6,7 @@
 #include <stdint.h>
 //// user define start
 #include "threads/synch.h"
+#include "threads/vaddr.h"
 //// user define end
 
 /* States in a thread's life cycle. */

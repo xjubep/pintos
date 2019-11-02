@@ -32,7 +32,7 @@ struct thread *get_child_process(int pid) {
 	// (자식 리스트에 접근하여 프로세스 디스크립터 검색)
 	struct list *child_list = &(thread_current()->child);
 	struct list_elem *e;
-	struct thread *tmp;
+	struct thread *tmp = NULL;
 
 	for (e = list_begin(child_list); e != list_end(child_list); 
 	e = list_next(e)) {
@@ -46,8 +46,12 @@ struct thread *get_child_process(int pid) {
 void remove_child_process(struct thread *cp) {
 	// 부모 프로세스의 자식 리스트에서 프로세스 디스크립터 제거
 	// 프로세스 디스크립터 메모리 해제
-	list_remove(&(cp->child_elem));	// 자식 리스트에서 제거
-	palloc_free_page(cp);						// 프로세스 디스크립터 메모리 해제
+	if (cp == NULL)
+		exit(-1);
+	else {
+		list_remove(&(cp->child_elem));	// 자식 리스트에서 제거
+		palloc_free_page(cp);						// 프로세스 디스크립터 메모리 해제
+	}
 }
 //// user define end
 
@@ -287,7 +291,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    Returns true if successful, false otherwise. */
 
 //// user define start
-#define MAX_ARG	10
+#define MAX_ARG	30
 #define MAX_LEN 30
 //// user define end
 
