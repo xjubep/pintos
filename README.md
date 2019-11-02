@@ -38,5 +38,5 @@ Referenced files
 </pre>
 
 /// 하나만 검사하는 명령어 (pintos/src/userprog/build 에서 수행)
-pintos -v -k -T 60 --qemu --filesys-size=2 -p tests/userprog/sc-bad-sp -a sc-bad-sp -- -q -f 'run sc-bad-sp'
+pintos -v -k -T 60 --qemu --filesys-size=2 -p tests/userprog/sc-bad-sp -a sc-bad-sp -- -q -f run sc-bad-sp
 
