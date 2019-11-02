@@ -20,6 +20,36 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+//// user define start
+struct thread *get_child_process(int pid);
+void remove_child_process(struct thread *cp);
+//// user define end
+
+//// user define start
+struct thread *get_child_process(int pid) {
+	// 자식 리스트를 pid로 검색하여 해당 프로세스 디스크립터 반환
+	// pid가 없을 경우 NULL 반환
+	// (자식 리스트에 접근하여 프로세스 디스크립터 검색)
+	struct list *child_list = &(thread_current()->child);
+	struct list_elem *e;
+	struct thread *tmp;
+
+	for (e = list_begin(child_list); e != list_end(child_list); 
+	e = list_next(e)) {
+		tmp = list_entry(e, struct thread, child_elem);
+		if (tmp->tid == pid)	// 해당 pid가 존재하면 프로세스 디스크립터 반환
+			return tmp;
+	}
+	return NULL;	// 리스트에 존재하지 않으면 NULL 리턴	
+}
+
+void remove_child_process(struct thread *cp) {
+	// 부모 프로세스의 자식 리스트에서 프로세스 디스크립터 제거
+	// 프로세스 디스크립터 메모리 해제
+	list_remove(&(cp->child_elem));	// 자식 리스트에서 제거
+	palloc_free_page(cp);						// 프로세스 디스크립터 메모리 해제
+}
+//// user define end
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -68,10 +98,29 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
+	//// user define start
+	//printf("%s\n", file_name);
+	// 메모리 load 완료 시, 부모 프로세스 다시 진행 (세마포어)
+	sema_up(&(thread_current()->load_semaphore));
+	//// user define end
+
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
-    thread_exit ();
+	
+	//// user define start
+	/* if (!success)
+				thread_exit();
+	*/
+	// 메모리 적재 실패 시 프로세스 디스크립터에 메모리 적재 실패
+	if (!success) {
+		thread_current()->is_load_success = 0;
+		thread_exit();
+	}
+	// 메모리 적재 성공 시 프로세스 디스크립터에 메모리 적재 성공
+	else {
+		thread_current()->is_load_success = 1;
+	}
+	//// user define end
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -95,24 +144,31 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-	/*
-  int i, sum = 2;
-	for (i = 0; i < 1000000000; i++) {
-		sum += i;
-		return sum;
-	}
-	*/
-	// chil process의 프로세스 디스크립터 검색
-	// 예외 처리 발생시 -1 리턴 
-	// 자식 프로세스가 종료될 때까지 부모 프로세스 대기 (세마포어 이용)
-	// 자식 프로세스 디스크립터 삭제
-	// 자식 프로세스의 exit status 리턴
+	//// user define start
+	// 자식 프로세스가 수행되고 종료될때 까지 부모 프로세스 대기
+	// 프로세스의 정보를 알기 위해 프로세스 디스크립터 검색
+	// 자식 프로세스가 종료되지 않았으면 부모 프로세스 대기
+	// 유저 프로세스가 정상적으로 종료 시 exit status 반환, 아닐 시 -1 반환
+	// (자식 프로세스의 프로세스 디스크립터 검색)
+	// (예외 처리 발생시 -1 리턴)
+	// (자식 프로세스가 종료될 때까지 부모 프로세스 대기, semaphore)
+	// (자식 프로세스 디스크립터 삭제)
+	// (자식 프로세스의 exit status 리턴)
+	
+	int exit_status;
+	struct thread *cp = get_child_process(child_tid);
+	//int exit_status = 
+	if (cp == NULL)
+		return -1;
+	sema_down(&(cp->exit_semaphore));
+	exit_status = cp->exit_status;
+	remove_child_process(cp);
 
-	struct thread *cur = thread_current();
-	//sema_down(&(child_process->
-
-	while(1);
-	return -1;
+	return exit_status;
+	//while(1);
+	//// user define end
+	//return -1;
+	
 }
 
 /* Free the current process's resources. */

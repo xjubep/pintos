@@ -77,15 +77,22 @@ void exit(int status) {
 pid_t exec(const char *cmd_line) {
 	// create child process
 	// refer to process_execute() in userprog/process.c
-	// success: return tid // fail: return -1
+	// success: return pid // fail: return -1
 /*
 	if ( ) {
 		return 
 	}
 */	
-	struct thread *child;
+	// 자식 프로세스를 생성하고 프로그램을 실행시키는 시스템 콜
+	// 프로세스 생성에 성공 시 생성된 프로세스에 pid 값을 반환, 실패 시 -1 반환
+	// 부모 프로세스는 생성된 자식 프로세스의 프로그램이 메모리에에 적재될 때까지 대기
+	pid_t pid = process_execute(cmd_line);
+	struct thread *child = get_child_process(pid);
 
-	return process_execute(cmd_line);
+	sema_down(&(child->load_semaphore));
+
+	return (child->is_load_success == 1)? pid: -1;
+	//return process_execute(cmd_line);
 	//return -1;
 }
 
@@ -96,8 +103,11 @@ int wait(pid_t pid) {
 	// get the exit status from child thread when the child thread is dead
 	// to prevent termination of process bofre return from wait(),
 	// you can use busy waiting technique or thread_yieled()
+	// 자식 프로세스가 종료 될 때까지 대기
+	// process_wait 사용
+
 	return process_wait(pid);
-}
+}	
 
 int read(int fd, void *buffer, unsigned size) {
 	// fd: file descriptor (stdin = 0, stdou = 1)
