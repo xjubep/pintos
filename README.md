@@ -11,7 +11,7 @@ Referenced files
 - src/devices: shutdown.h / shutdown.c,   input.h / input.c
 
 <pre>
-[Functionality] (10/13)
+[Functionality] (9/13) -> (10/13) (branch 1)
   1. args-none: pass
   2. args-single: pass
   3. args-multiple: pass
@@ -20,20 +20,20 @@ Referenced files
   6. exec-once: pass
   7. exec-multiple: pass
     8. exec-arg: fail
-    9. wait-simple: fail
+    9. wait-simple: fail -> pass (branch 1)
     10. wait-twice: fail
     11. multi-recurese: fail
   12. exit: pass
   13. halt: pass
 
-[Robustness] (4/8)
+[Robustness] (4/8) -> (4/8) (brnach 1)
     1. exec-bad-ptr: fail (user PF)
   2. exec-missing: pass	
-    3. sc-bad-arg: fail
+    3. sc-bad-arg: fail -> pass (branch 1)
     4. sc-bad-sp: fail (user PF)
   5. sc-boundary: pass
   6. sc-boundary-2: pass
-  7. wait-bad-pid: pass
+  7. wait-bad-pid: pass -> fail (branch 1)
     8. wait-killed: fail
 </pre>
 
