@@ -26,7 +26,7 @@ Referenced files
   12. exit: pass
   13. halt: pass
 
-[Robustness] (4/8) -> (4/4) (brnach 1)
+[Robustness] (4/8) -> (4/8) (brnach 1)
     1. exec-bad-ptr: fail (user PF)
   2. exec-missing: pass	
     3. sc-bad-arg: fail -> pass (branch 1)
