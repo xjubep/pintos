@@ -207,18 +207,36 @@ thread_create (const char *name, int priority,
   intr_set_level (old_level);
 
 	//// user define start
-	// (생성된 프로세스 디스크립터의 정보를 초기화)
-	// (부모 프로세스의 자식 리스트에 추가)
-	t->parent = thread_current();	// 부모 프로세스 저장
-	t->is_load_success = 0;								// 프로그램이 로드되지 않음
-	t->is_exit = 0;												// 프로세스가 종료되지 않음
-	sema_init(&(t->exit_semaphore), 0);	 	// exit 세마포어 0으로 초기화
-	sema_init(&(t->load_semaphore), 0);		// load 세마포어 0으로 초기화
-	// 자식 리스트에 추가
-	t->child_elem.prev = NULL;
-	t->child_elem.next = NULL;
-	list_push_back(&(t->parent->child), &(t->child_elem));
+	// 생성된 프로세스 디스크립터의 정보를 초기화
+	// 부모 프로세스의 자식 리스트에 추가
 
+	/* 부모 프로세스 저장 */
+	struct thread *p = running_thread();
+	if (t == p) {
+		t->parent = NULL;
+	}
+	else {
+		t->parent = p;
+	}
+
+	/* 프로그램이 로드되지 않음 */
+	t->is_load = -1;
+
+	/* 프로세스가 종료되지 않음 */
+	t->is_end = 0;
+
+	/* exit 세마포어 0으로 초기화 */
+	sema_init(&(t->exit_semaphore), 0);
+
+	/* load 세마포어 0으로 초기화 */
+	sema_init(&(t->load_semaphore), 0);
+
+	/* 자식 리스트에 추가 */
+	if (t != p) {
+		t->child_elem.prev = NULL;
+		t->child_elem.next = NULL;
+		list_push_back(&(p->child_list), &(t->child_elem));
+	}
 	//// user define end
 
   /* Add to run queue. */
@@ -315,12 +333,16 @@ thread_exit (void)
   intr_disable ();
   list_remove (&thread_current()->allelem);
 	//// user define start
+	// 프로세스 종료 시 thread_exit() 호출
 	// 유저 프로세스가 종료되면 부모 프로세스는 대기 상태 이탈 후 진행
 	// 프로세스 디스크립터에 프로세스 종료 됨을 표시
-	// (프로세스 디스크립터에 프로세스 종료를 알림)
-	// (부모프로세스의 대기 상태 이탈, 세마포어 이용)
-	thread_current()->is_exit = 1;
+
+	/* 프로세스 디스크립터에 프로세스 종료를 알림 */
+	thread_current()->is_end = 1;
+
+	/* 부모프로세스의 대기 상태 이탈 (세마포어 이용) */
 	sema_up(&(thread_current()->exit_semaphore));
+
 	//// user define end
   thread_current ()->status = THREAD_DYING;
   schedule ();
@@ -495,9 +517,10 @@ init_thread (struct thread *t, const char *name, int priority)
   list_push_back (&all_list, &t->allelem);
 
 	//// user define start
-	// initialize child list 
-	// (스레드 생성 시 자식 리스트 초기화)
-	list_init(&(t->child));
+	// 스레드 생성 시 자식 리스트 초기화
+
+	/* 자식 리스트 초기화 */
+	list_init(&(t->child_list));
 	//// user define end
 }
 
@@ -570,9 +593,10 @@ thread_schedule_tail (struct thread *prev)
   if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread) 
     {
       ASSERT (prev != cur);
-			//// usr define start
+			//// user define start
 			// 프로세스 디스크립터를 삭제하지 않도록 수정
-      //palloc_free_page (prev); // 프로세스 디스크립터 삭제
+			/* 프로세스 디스크립터 삭제 */
+      // palloc_free_page (prev);
 			//// user define end
     }
 }

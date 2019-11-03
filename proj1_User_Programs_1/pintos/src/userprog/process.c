@@ -25,36 +25,6 @@ struct thread *get_child_process(int pid);
 void remove_child_process(struct thread *cp);
 //// user define end
 
-//// user define start
-struct thread *get_child_process(int pid) {
-	// 자식 리스트를 pid로 검색하여 해당 프로세스 디스크립터 반환
-	// pid가 없을 경우 NULL 반환
-	// (자식 리스트에 접근하여 프로세스 디스크립터 검색)
-	struct list *child_list = &(thread_current()->child);
-	struct list_elem *e;
-	struct thread *tmp = NULL;
-
-	for (e = list_begin(child_list); e != list_end(child_list); 
-	e = list_next(e)) {
-		tmp = list_entry(e, struct thread, child_elem);
-		if (tmp->tid == pid)	// 해당 pid가 존재하면 프로세스 디스크립터 반환
-			return tmp;
-	}
-	return NULL;	// 리스트에 존재하지 않으면 NULL 리턴	
-}
-
-void remove_child_process(struct thread *cp) {
-	// 부모 프로세스의 자식 리스트에서 프로세스 디스크립터 제거
-	// 프로세스 디스크립터 메모리 해제
-	if (cp == NULL)
-		exit(-1);
-	else {
-		list_remove(&(cp->child_elem));	// 자식 리스트에서 제거
-		palloc_free_page(cp);						// 프로세스 디스크립터 메모리 해제
-	}
-}
-//// user define end
-
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -74,14 +44,12 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   //tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-
-	//// user define start
+  //// user define start
 	char *token, *save_ptr;
 	token = strtok_r(file_name, " ", &save_ptr);
-	tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+	tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 	//// user define end
-
-  if (tid == TID_ERROR)
+	if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
 }
@@ -103,28 +71,29 @@ start_process (void *file_name_)
   success = load (file_name, &if_.eip, &if_.esp);
 
 	//// user define start
-	//printf("%s\n", file_name);
-	// 메모리 load 완료 시, 부모 프로세스 다시 진행 (세마포어)
-	sema_up(&(thread_current()->load_semaphore));
+	// 메모리 적재 성공 시 유저 프로그램 실행, 실패 시 스레드 종료
+
+	/* 메모리 적재 완료 시 부모 프로세스 다시 진행 (세마포어) */
+	struct thread *t = thread_current();
+	sema_up(&(t->load_semaphore));
+
+	/* If load failed, quit. */
+	palloc_free_page (file_name);
+	if (!success) {
+		/* 메모리 적재 실패 시 프로세스 디스크립터에 메모리 적재 실패 */
+		t->is_load = -1;
+		thread_exit();
+	}
+	else {
+		/* 메모리 적재 성공 시 프로세스 디스크립터에 메모리 적재 성공 */
+		t->is_load = 1;
+	}
 	//// user define end
 
   /* If load failed, quit. */
-  palloc_free_page (file_name);
-	
-	//// user define start
-	/* if (!success)
-				thread_exit();
-	*/
-	// 메모리 적재 실패 시 프로세스 디스크립터에 메모리 적재 실패
-	if (!success) {
-		thread_current()->is_load_success = 0;
-		thread_exit();
-	}
-	// 메모리 적재 성공 시 프로세스 디스크립터에 메모리 적재 성공
-	else {
-		thread_current()->is_load_success = 1;
-	}
-	//// user define end
+//  palloc_free_page (file_name);
+//  if (!success) 
+//    thread_exit ();
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -146,33 +115,34 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid) 
+process_wait (tid_t child_tid UNUSED) 
 {
 	//// user define start
-	// 자식 프로세스가 수행되고 종료될때 까지 부모 프로세스 대기
+	//while(1);
+	// 자식 프로세스가 수행 되고 종료될 때 까지 부모 프로세스 대기
 	// 프로세스의 정보를 알기 위해 프로세스 디스크립터 검색
 	// 자식 프로세스가 종료되지 않았으면 부모 프로세스 대기
 	// 유저 프로세스가 정상적으로 종료 시 exit status 반환, 아닐 시 -1 반환
-	// (자식 프로세스의 프로세스 디스크립터 검색)
-	// (예외 처리 발생시 -1 리턴)
-	// (자식 프로세스가 종료될 때까지 부모 프로세스 대기, semaphore)
-	// (자식 프로세스 디스크립터 삭제)
-	// (자식 프로세스의 exit status 리턴)
 	
-	int exit_status;
-	struct thread *cp = get_child_process(child_tid);
-	//int exit_status = 
-	if (cp == NULL)
-		return -1;
-	sema_down(&(cp->exit_semaphore));
-	exit_status = cp->exit_status;
-	remove_child_process(cp);
+	/* 자식 프로세스의 프로세스 디스크립터 검색 */
+	struct thread *child = get_child_process(child_tid);
+	int exit_status = child->exit_status;
 
-	return exit_status;
-	//while(1);
-	//// user define end
-	//return -1;
+	/* 예외 처리 발생시 -1 리턴 */
+	if (child == NULL)
+		return -1;
 	
+	/* 자식 프로세스가 종료될 때까지 부모 프로세스 대기 (세마포어) */
+	sema_down(&(child->exit_semaphore));
+
+	/* 자식 프로세스 디스크립터 삭제 */
+	remove_child_process(child);
+	
+	/* 자식 프로세스의 exit status 리턴 */
+	return exit_status;
+
+	//// user define end
+  return -1;
 }
 
 /* Free the current process's resources. */
@@ -289,12 +259,10 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    Stores the executable's entry point into *EIP
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
-
 //// user define start
-#define MAX_ARG	30
-#define MAX_LEN 30
+#define	MAX_ARG	30
+#define	MAX_LEN	30
 //// user define end
-
 bool
 load (const char *file_name, void (**eip) (void), void **esp) 
 {
@@ -321,10 +289,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
 		token != NULL; token = strtok_r(NULL, "' '\n", &save_ptr)) {
 		arg_idx = argc;
 		strlcpy(argv[arg_idx], token, MAX_LEN);
-		//printf("argv[%d]: %s\n", arg_idx, argv[arg_idx]);
 		argc++;
 	}
-	//printf("%d\n", argc);
 	//// user define end
 
   /* Open executable file. */
@@ -410,52 +376,55 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
-	
 	//// user define start
+	/* construct stack */
 	void *argv_addr[MAX_ARG], *tmp_esp = *esp;
 	int j, len, total_len = 0;
 
-	// push argv string (argv[i][j])
-	for (i = argc - 1; i > -1; i--) {
+	// push argv string (argv[i][j]), char
+	for (i = argc -1; i > -1; i--) {
 		len = strlen(argv[i]);
 		total_len += (len + 1);
-		//argv_addr[i] = (uint32_t*)*esp;
 		for (j = len; j > -1; j--) {
-			*esp = *esp -1;
-			**(char**)esp = argv[i][j];
+			*esp = *esp - 1;
+			//**(uint8_t **)esp = argv[i][j];
+			*(uint8_t *)(*esp) = argv[i][j];
 		}
-		argv_addr[i] = (uint32_t*)*esp;
+		//argv_addr[i] = (uint32_t *)*esp;
+		argv_addr[i] = (uint32_t *)(*esp);
 	}
 
-	// word align
+	// word align, uint8_t
 	if (total_len % 4 != 0)
 		*esp = *esp - (4 - (total_len % 4));
 	
-	// push NULL (argv[argc])
+	// push NULL (argv[argc]), char *
 	*esp = *esp - 4;
-	//**(uint32_t**)esp = 0;
 	*(uint32_t *)(*esp) = 0;
-
-	// push argv address (argv[i])
+	
+	// push argv address (argv[i]), char *
 	for (i = argc - 1; i > -1; i--) {
 		*esp = *esp - 4;
-		*(uint32_t**)*esp = argv_addr[i];
+		//*(uint32_t **)(*esp) = argv_addr[i];
+		*(uint32_t *)(*esp) = argv_addr[i];
 	}
 
-	// push argv
+	// push argv, char **
 	*esp = *esp - 4;
-	**(uint32_t**)esp = *esp + 4;
+	//**(uint32_t**)esp = *esp + 4;
+	*(uint32_t **)(*esp) = *esp + 4;
 
-	// push argc
+	// push argc, int
 	*esp = *esp - 4;
-	**(uint32_t**)esp = argc;
+	//**(uint32_t**)esp = argc;
+	*(uint32_t **)(*esp) = argc;
 
-	// push return address
+	// push return address, void *
 	*esp = *esp - 4;
-	**(uint32_t**)esp = 0;
+	//**(uint32_t**)esp = 0;
+	*(uint32_t **)(*esp) = 0;
 
 	//hex_dump(*esp, *esp, tmp_esp - *esp, true);
-	
 	//// user define end
 
   /* Start address. */
@@ -616,3 +585,44 @@ install_page (void *upage, void *kpage, bool writable)
   return (pagedir_get_page (th->pagedir, upage) == NULL
           && pagedir_set_page (th->pagedir, upage, kpage, writable));
 }
+
+//// user define start
+struct thread *get_child_process(int pid) {
+	// 자식 리스트를 pid로 검색하여 해당 프로세스 디스크립터를 반환
+	// pid가 없을 경우 NULL 반환
+
+	struct list_elem *e;
+	struct thread *tmp, *p = thread_current();
+
+	if (p == NULL)
+		return NULL;
+
+	/* 자식 리스트에 접근하여 프로세스 디스크립터 검색 */
+	for (e = list_begin(&(p->child_list)); e != list_end(&(p->child_list));
+		e = list_next(e)) {
+			tmp = list_entry(e, struct thread, child_elem);
+
+			/* 해당 pid가 존재하면 프로세스 디스크립터 반환 */
+			if (tmp->tid == pid) {
+				return tmp;
+			}
+	}
+
+	/* 리스트에 존재하지 않으면 NULL 리턴 */
+	return NULL;
+}
+
+void remove_child_process(struct thread *cp) {
+	// 부모 프로세스의 자식 리스트에서 프로세스 디스크립터 제거
+	// 프로세스 디스크립터 메모리 해제
+
+	if (cp != NULL) {
+		/* 자식 리스트에서 제거 */
+		/// 고치기
+		list_remove(&(cp->child_elem));
+
+		/* 프로세스 디스크립터 메모리 해제 */
+		palloc_free_page(cp);
+	}
+}
+//// user define end

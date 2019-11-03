@@ -5,9 +5,9 @@
 #include <list.h>
 #include <stdint.h>
 //// user define start
-#include "threads/synch.h"
-#include "threads/vaddr.h"
+#include "synch.h"
 //// user define end
+
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -100,22 +100,44 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-//// user define start
-		struct thread *parent;							/* parent thread */
-		struct list_elem child_elem;				/* child list element */
-		struct list child;									/* child list	*/
-
-		int is_load_success;								/* load success check */
-		int is_exit;												/* process exit check */
-		struct semaphore exit_semaphore;		/* exit semaphore. */
-		struct semaphore load_semaphore;		/* load semaphore. */
-		int exit_status;
-//// user define end
-
 #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+		
+		//// user define start
+		// 프로세스의 생성 성공 여부를 확인하는 플래그 추가
+		// (실행 파일이 로드에 실패하면 -1)
+		// 프로세스의 종료 유무를 확인하는 필드 추가
+		// 프로세스의 종료 상태를 나타내는 필드 추가
+		// 자식 프로세스의 생성/종료 대기를 위한 세마포어 추가
+		// 자식 프로세스 리스트 필드 추가
+		// 부모 프로세스 디스크립터(struc thread)를 가리키는 필드 추가
+
+		/* 부모 프로세스의 디스크립터 */
+		struct thread *parent;
+
+		/* 자식 리스트의 element */
+		struct list_elem child_elem;
+
+		/* 자식 리스트 */
+		struct list child_list;
+
+		/* 프로세스의 프로그램 메모리 적재 유무 */
+		int is_load; // 성공: 1, 아니면 -1
+
+		/* 프로세스가 종료 유무 확인 */
+		int is_end; // 종료: 1, 아니면: 0
+
+		/* exit 세마포어 */
+		struct semaphore exit_semaphore;
+
+		/* load 세마포어 */
+		struct semaphore load_semaphore;
+
+		/* exit 호출 시 종료 status */
+		int exit_status;
+		//// user define end
   };
 
 /* If false (default), use round-robin scheduler.
