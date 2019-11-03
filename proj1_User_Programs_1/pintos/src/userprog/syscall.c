@@ -7,7 +7,7 @@
 #include <devices/shutdown.h>
 #include <devices/input.h>
 #include "threads/vaddr.h"
-
+#include "userprog/pagedir.h"
 //// user define end
 
 static void syscall_handler (struct intr_frame *);
@@ -49,6 +49,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 	/* 저장된 인자 값이 포인터일 경우 유저 영역의 주소인지 확인 */
 	//printf("%d\n", syscall_num);
+	//hex_dump(sp, sp, 100, true);
 	switch (syscall_num) {
 		case SYS_HALT: // 0
 			halt();
@@ -106,12 +107,23 @@ void check_address(void *addr) {
 
 	/* 포인터가 가리키는 주소가 유저영역의 주소인지 확인 */
 	//check_user_addr = is_user_vaddr(addr);
-	if (addr < 0x08048000 || addr >= PHYS_BASE)
+	if (addr < (void *)0x08048000 || addr >= (void *)PHYS_BASE)
 		check_user_addr = 0;
 
 	/* 잘못된 접근일 경우 프로세스 종료 */
 	if (check_user_addr == 0)
 		exit(-1);
+
+	void *page = pagedir_get_page(thread_current()->pagedir, addr);
+
+	if (page == NULL)
+		exit(-1);
+
+	//if (addr == NULL)
+	//	exit(-1);
+
+	//if (is_kernel_vaddr)
+	//	exit(-1);
 }
 
 void get_argument(void *sp, int *arg, int count) {
@@ -236,4 +248,4 @@ int sum_of_four_int(int a, int b, int c, int d) {
 	sum = a + b + c + d;
 	return sum;
 }
-//// userdefine end
+//// user define end

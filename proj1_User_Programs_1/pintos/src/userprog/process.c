@@ -46,7 +46,7 @@ process_execute (const char *file_name)
   //tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   //// user define start
 	char *token, *save_ptr;
-	token = strtok_r(file_name, " ", &save_ptr);
+	token = strtok_r((char *)file_name, " ", &save_ptr);
 	tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 	//// user define end
 	if (tid == TID_ERROR)
@@ -285,12 +285,13 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	char *token, *save_ptr;
 	int arg_idx, argc = 0;
 
-	for (token = strtok_r(file_name, "' '\n", &save_ptr);
+	for (token = strtok_r((char *)file_name, "' '\n", &save_ptr);
 		token != NULL; token = strtok_r(NULL, "' '\n", &save_ptr)) {
 		arg_idx = argc;
 		strlcpy(argv[arg_idx], token, MAX_LEN);
 		argc++;
 	}
+	//printf("%s\n", file_name);
 	//// user define end
 
   /* Open executable file. */
@@ -387,11 +388,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
 		total_len += (len + 1);
 		for (j = len; j > -1; j--) {
 			*esp = *esp - 1;
-			//**(uint8_t **)esp = argv[i][j];
-			*(uint8_t *)(*esp) = argv[i][j];
+			**(char **)esp = argv[i][j];
 		}
-		//argv_addr[i] = (uint32_t *)*esp;
-		argv_addr[i] = (uint32_t *)(*esp);
+		argv_addr[i] = (uint32_t *)*esp;
 	}
 
 	// word align, uint8_t
@@ -400,29 +399,26 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	
 	// push NULL (argv[argc]), char *
 	*esp = *esp - 4;
-	*(uint32_t *)(*esp) = 0;
+	**(uint32_t **)esp = 0;
 	
 	// push argv address (argv[i]), char *
 	for (i = argc - 1; i > -1; i--) {
 		*esp = *esp - 4;
-		//*(uint32_t **)(*esp) = argv_addr[i];
-		*(uint32_t *)(*esp) = argv_addr[i];
+		**(uint32_t **)esp = argv_addr[i];
 	}
+	//
 
 	// push argv, char **
 	*esp = *esp - 4;
-	//**(uint32_t**)esp = *esp + 4;
-	*(uint32_t **)(*esp) = *esp + 4;
+	**(uint32_t **)esp = *esp + 4;
 
 	// push argc, int
 	*esp = *esp - 4;
-	//**(uint32_t**)esp = argc;
-	*(uint32_t **)(*esp) = argc;
+	**(uint32_t**)esp = argc;
 
 	// push return address, void *
 	*esp = *esp - 4;
-	//**(uint32_t**)esp = 0;
-	*(uint32_t **)(*esp) = 0;
+	**(uint32_t**)esp = 0;
 
 	//hex_dump(*esp, *esp, tmp_esp - *esp, true);
 	//// user define end
@@ -618,8 +614,18 @@ void remove_child_process(struct thread *cp) {
 
 	if (cp != NULL) {
 		/* 자식 리스트에서 제거 */
-		/// 고치기
-		list_remove(&(cp->child_elem));
+		// 다시 보기
+		struct list_elem *e;
+		struct thread *tmp, *p = thread_current();
+
+		for (e = list_begin(&(p->child_list)); e != list_end(&(p->child_list));
+			e = list_next(e)) {
+				tmp = list_entry(e, struct thread, child_elem);
+				if (tmp->tid == cp->tid) {
+					list_remove(&(tmp->child_elem));
+				}
+		}
+
 
 		/* 프로세스 디스크립터 메모리 해제 */
 		palloc_free_page(cp);
