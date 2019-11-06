@@ -11,7 +11,7 @@ Referenced files
 - src/devices: shutdown.h / shutdown.c,   input.h / input.c
 
 <pre>
-[Functionality] (10/13) (branch 1)
+[Functionality] (12/13) (branch 1)
   1. args-none: pass
   2. args-single: pass
   3. args-multiple: pass
@@ -21,8 +21,8 @@ Referenced files
   7. exec-multiple: pass
     8. exec-arg: fail
   9. wait-simple: pass
-    10. wait-twice: fail
-    11. multi-recurese: fail
+  10. wait-twice: pass
+  11. multi-recurese: pass
   12. exit: pass
   13. halt: pass
 
