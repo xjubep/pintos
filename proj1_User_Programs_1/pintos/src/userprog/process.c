@@ -46,7 +46,7 @@ process_execute (const char *file_name)
   //tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   //// user define start
 	char *token, *save_ptr;
-	token = strtok_r((char *)file_name, " ", &save_ptr);
+	token = strtok_r((char *)file_name, "' '\n", &save_ptr);
 	tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 	//// user define end
 	if (tid == TID_ERROR)
@@ -126,15 +126,16 @@ process_wait (tid_t child_tid UNUSED)
 	
 	/* 자식 프로세스의 프로세스 디스크립터 검색 */
 	struct thread *child = get_child_process(child_tid);
-	int exit_status = child->exit_status;
-
+	//int exit_status = child->exit_status;
+	int exit_status;
 	/* 예외 처리 발생시 -1 리턴 */
 	if (child == NULL)
 		return -1;
 	
+	//exit_status = child->exit_status;
 	/* 자식 프로세스가 종료될 때까지 부모 프로세스 대기 (세마포어) */
 	sema_down(&(child->exit_semaphore));
-
+	exit_status = child->exit_status;
 	/* 자식 프로세스 디스크립터 삭제 */
 	remove_child_process(child);
 	
@@ -142,7 +143,6 @@ process_wait (tid_t child_tid UNUSED)
 	return exit_status;
 
 	//// user define end
-  return -1;
 }
 
 /* Free the current process's resources. */
@@ -611,24 +611,23 @@ struct thread *get_child_process(int pid) {
 void remove_child_process(struct thread *cp) {
 	// 부모 프로세스의 자식 리스트에서 프로세스 디스크립터 제거
 	// 프로세스 디스크립터 메모리 해제
+	if (cp == NULL)
+		return;
+	
+	/* 자식 리스트에서 제거 */
+	struct list_elem *e;
+	struct thread *tmp, *p = thread_current();
 
-	if (cp != NULL) {
-		/* 자식 리스트에서 제거 */
-		// 다시 보기
-		struct list_elem *e;
-		struct thread *tmp, *p = thread_current();
-
-		for (e = list_begin(&(p->child_list)); e != list_end(&(p->child_list));
-			e = list_next(e)) {
-				tmp = list_entry(e, struct thread, child_elem);
-				if (tmp->tid == cp->tid) {
-					list_remove(&(tmp->child_elem));
-				}
+	for (e = list_begin(&(p->child_list)); e != list_end(&(p->child_list));
+		e = list_next(e)) {
+		tmp = list_entry(e, struct thread, child_elem);
+		if (tmp->tid == cp->tid) {
+			list_remove(&(tmp->child_elem));
 		}
-
-
-		/* 프로세스 디스크립터 메모리 해제 */
-		palloc_free_page(cp);
 	}
+
+
+	/* 프로세스 디스크립터 메모리 해제 */
+	palloc_free_page(cp);
 }
 //// user define end

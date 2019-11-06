@@ -211,7 +211,7 @@ thread_create (const char *name, int priority,
 	// 부모 프로세스의 자식 리스트에 추가
 
 	/* 부모 프로세스 저장 */
-	struct thread *p = running_thread();
+	struct thread *p = thread_current();
 	if (t == p) {
 		t->parent = NULL;
 	}
@@ -233,8 +233,6 @@ thread_create (const char *name, int priority,
 
 	/* 자식 리스트에 추가 */
 	if (t != p) {
-		t->child_elem.prev = NULL;
-		t->child_elem.next = NULL;
 		list_push_back(&(p->child_list), &(t->child_elem));
 	}
 	//// user define end

@@ -37,58 +37,49 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  //printf ("system call!\n");
 	//// user define start
 	/* user stack에 저장되어 있는 syscall_num을 이용해 handler 구현 */
 	void *sp = f->esp;
 	int syscall_num = *(int *)sp;
-	int arg[4], count = 0;
+	int arg[4];
+	int count[22] = {
+		0, 1, 1, 1, -1, 		// HALT, EXIT, EXEC, WAIT, CREATE
+		-1, -1, -1, 3, 3, 	// REMOVE, OPEN, FILESIZE, READ, WRITE
+		-1, -1, -1,					// SEEK, TELL, CLOSE
+		-1, -1,							// MMAP, MUNMAP
+		-1, -1, -1, -1, -1, // CHDIR, MKDIR, READDIR, ISDIR, INUMBER
+		1, 4 };							// FIBO, SUM
+		
 
 	/* stack ptr이 user 영역인지 확인 */
 	check_address(sp);
 
 	/* 저장된 인자 값이 포인터일 경우 유저 영역의 주소인지 확인 */
-	//printf("%d\n", syscall_num);
-	//hex_dump(sp, sp, 100, true);
+	if (syscall_num != -1)
+		get_argument(sp, arg, count[syscall_num]);
 	switch (syscall_num) {
 		case SYS_HALT: // 0
 			halt();
 			break;
 		case SYS_EXIT: // 1
-			count = 1;
-			get_argument(sp, arg, count);
 			exit(arg[0]);
 			break;
 		case SYS_EXEC: // 2
-			count = 1;
-			get_argument(sp, arg, count);
-			//check_address((void *)arg[0]);
 			f->eax = exec((const char *)arg[0]);
 			break;
 		case SYS_WAIT: // 3
-			count = 1;
-			get_argument(sp, arg, count);
-
 			f->eax = wait(arg[0]);
 			break;
 		case SYS_READ: // 8
-			count = 3;
-			get_argument(sp, arg, count);
 			f->eax = read(arg[0], (void *)arg[1], (unsigned)arg[2]);
 			break;
 		case SYS_WRITE: // 9
-			count = 3;
-			get_argument(sp, arg, count);
 			f->eax = write(arg[0], (const void *)arg[1], (unsigned)arg[2]);
 			break;
-		case SYS_FIBONACCI:
-			count = 1;
-			get_argument(sp, arg, count);
+		case SYS_FIBONACCI: // 21
 			fibonacci(arg[0]);
 			break;
-		case SYS_SUM_OF_FOUR_INT:
-			count = 4;
-			get_argument(sp, arg, count);
+		case SYS_SUM_OF_FOUR_INT: // 22
 			sum_of_four_int(arg[0], arg[1], arg[2], arg[3]);
 			break;
 		default:
@@ -106,7 +97,6 @@ void check_address(void *addr) {
 	int check_user_addr = 1; // 
 
 	/* 포인터가 가리키는 주소가 유저영역의 주소인지 확인 */
-	//check_user_addr = is_user_vaddr(addr);
 	if (addr < (void *)0x08048000 || addr >= (void *)PHYS_BASE)
 		check_user_addr = 0;
 
@@ -114,15 +104,9 @@ void check_address(void *addr) {
 	if (check_user_addr == 0)
 		exit(-1);
 
-	void *page = pagedir_get_page(thread_current()->pagedir, addr);
+	//void *page = pagedir_get_page(thread_current()->pagedir, addr);
 
-	if (page == NULL)
-		exit(-1);
-
-	//if (addr == NULL)
-	//	exit(-1);
-
-	//if (is_kernel_vaddr)
+	//if (page == NULL)
 	//	exit(-1);
 }
 
@@ -179,6 +163,8 @@ pid_t exec(const char *cmd_line) {
 	/* 생성된 자식 프로세스의 프로세스 디스크립터를 검색 */
 	struct thread *child = get_child_process(pid);
 	
+	if (child == NULL)
+		return -1;
 	/* 자식 프로세스의 프로그램이 적재될 때까지 대기 */
 	sema_down(&(child->load_semaphore));
 

@@ -17,6 +17,9 @@ enum thread_status
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
   };
+//// user define start
+enum load_status { NOT_LOAD, LOAD_FAIL, LOAD_SUCCESS};
+//// user define end
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
