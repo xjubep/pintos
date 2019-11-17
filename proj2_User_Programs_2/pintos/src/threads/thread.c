@@ -221,7 +221,7 @@ thread_create (const char *name, int priority,
 		list_push_back(&(p->child_list), &(t->child_elem));
 		
 	int i;
-	for (i = 0; i < 128; i++) 
+	for (i = 3; i < 128; i++) 
 		t->fd[i] = NULL;
 	//// user define end
 
