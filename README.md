@@ -29,3 +29,6 @@ Additional Requirement - BSD Scheduler (5%)
 
 /// 하나만 검사하는 명령어 (pintos/src/userprog/build 에서 수행)
 pintos -v -k -T 60 --qemu --filesys-size=2 -p tests/userprog/sc-bad-sp -a sc-bad-sp -- -q -f run sc-bad-sp
+
+// pintos/src/tests/threads/Make.tests 12개만 검사 되도록 수정함 -> 제출 전에 원래 파일로 다시 수정하기
+pintos -v -- -q run priority-lifo
