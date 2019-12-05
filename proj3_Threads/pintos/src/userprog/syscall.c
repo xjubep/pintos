@@ -38,14 +38,8 @@ int filesize(int fd);
 void seek (int fd, unsigned position);
 unsigned tell (int fd);
 void close(int fd);
-
-struct file {
-	struct inode *inode;
-	off_t pos;
-	bool deny_write;
-};
 //// user define end - prj2
-//
+
 void
 syscall_init (void) 
 {
@@ -71,7 +65,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 	check_address(sp);
 
-	if (syscall_num != -1)
+	if (count[syscall_num] != -1)
 		get_argument(sp, arg, count[syscall_num]);
 	switch (syscall_num) {
 		case SYS_HALT: // 0
@@ -163,7 +157,7 @@ void exit(int status) {
 pid_t exec(const char *cmd_line) {
 	pid_t pid = process_execute(cmd_line);
 	struct thread *child = get_child_process(pid);
-	
+		
 	if (child == NULL)
 		return -1;
 
@@ -222,9 +216,6 @@ int write(int fd, const void *buffer, unsigned size) {
 	}
 	else if (fd >= 3) {
 		fp = t->fd[fd];
-		if (fp->deny_write) {
-			file_deny_write(fp);
-		}
 		return file_write(fp, buffer, size);
 	}
 
@@ -296,7 +287,6 @@ int open (const char *file) {
 				file_deny_write(fp);
 			}
 			t->fd[i] = fp;
-			//file_deny_write(fp);
 			fd = i;
 			break;
 		}

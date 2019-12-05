@@ -14,7 +14,7 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
-
+//
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -27,6 +27,10 @@ static struct list ready_list;
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
+
+//// user define start - proj3
+static struct list sleep_list;
+//// user define end
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -53,6 +57,11 @@ static long long user_ticks;    /* # of timer ticks in user programs. */
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
+
+#ifndef USERPROG
+/* Project *3. */
+bool thread_prior_aging;
+#endif
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -137,6 +146,15 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+	
+#ifndef USERPROG
+	/* Project #3. */
+	//thread_wake_up();
+
+	/* Project #3. */
+	//if (thread_prior_aging == true)
+		//thread_aging();
+#endif
 }
 
 /* Prints thread statistics. */
@@ -221,7 +239,7 @@ thread_create (const char *name, int priority,
 		list_push_back(&(p->child_list), &(t->child_elem));
 		
 	int i;
-	for (i = 0; i < 128; i++) 
+	for (i = 3; i < 128; i++) 
 		t->fd[i] = NULL;
 	//// user define end
 

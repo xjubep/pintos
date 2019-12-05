@@ -7,7 +7,9 @@
 //// user define start
 #include "synch.h"
 //// user define end
-
+#ifndef USERPROG
+extern bool thread_prior_aging;
+#endif
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -117,7 +119,10 @@ struct thread
 		struct semaphore exit_semaphore;
 		struct semaphore load_semaphore;
 		int exit_status;
+		/* proj2 */
 		struct file *fd[128];
+		/* proj3 */
+		int wakeup_time;
 		//// user define end
   };
 
