@@ -4,16 +4,16 @@
 1. alarm-single: pass
 2. alarm-multiple: pass
 3. alarm-simultaneous: pass
-  4. alarm-priority: FAIL
+4. alarm-priority: pass
 5. alarm-zero: pass
 6. alarm-negative: pass
-  7. priority-change: FAIL
-  8. priority-change-2: FAIL
-  9. priority-fifo: FAIL
-  10. priority-lifo: FAIL // pintos -v -- -q run priority-lifo (can't be checked by make check)
-  11. priority-preemp: FAIL
-  12. priority-sema: FAIL
-  13. priority-aging: FAIL
+7. priority-change: pass
+8. priority-change-2: pass
+9. priority-fifo: pass
+10. priority-lifo: pass // pintos -v -- -q run priority-lifo (can't be checked by make check)
+11. priority-preemp: pass
+12. priority-sema: pass
+13. priority-aging: pass
 -----------------------------------
 Additional Requirement - BSD Scheduler (5%)
   1. mlfqs-block: FAIL
