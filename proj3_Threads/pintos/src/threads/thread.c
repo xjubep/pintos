@@ -370,7 +370,8 @@ thread_yield (void)
   if (cur != idle_thread) {
     //list_push_back (&ready_list, &cur->elem);
     list_insert_ordered(&ready_list, &cur->elem, thread_pri_more, NULL);
-  }  
+  } 
+  //// user define end
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -695,11 +696,6 @@ void update_next_tick_to_awake(int64_t tick) {
     next_tick_to_awake = tick;
 }
 
-// int64_t get_next_tick_to_awake(void) {
-//   // 다음 번에 깨워야 할 tick 시간 가져오기
-//   return next_tick_to_awake;
-// }
-
 bool thread_pri_more(const struct list_elem *a, const struct list_elem *b, void *aux) {
   bool tf;  	
   struct thread *thread_1 = list_entry(a, struct thread, elem);
@@ -711,34 +707,6 @@ bool thread_pri_more(const struct list_elem *a, const struct list_elem *b, void 
 }
 
 void thread_aging(void) {
-  // struct thread *cur = thread_current();
-  // enum intr_level old_level;
-
-  // if (cur != idle_thread) {
-  //   old_level = intr_disable();
-  //   cur->wakeup_time = awake_tick;
-  //   list_push_back(&sleep_list, &cur->elem);
-  //   update_next_tick_to_awake(awake_tick);
-  //   thread_block();
-  //   intr_set_level(old_level);
-  // }
-
-  // struct list_elem *e;
-  // struct thread *tmp;
-
-  // for (e = list_begin(&sleep_list); e != list_end(&sleep_list); ) {
-  //   tmp = list_entry(e, struct thread, elem);
-  //   if (awake_tick >= tmp->wakeup_time) {
-  //     // 깨워야 될 thread면 sleep list에서 제거하고 깨움
-  //     e = list_remove(&tmp->elem);
-  //     thread_unblock(tmp);
-  //   }
-  //   else {
-  //     // 아니면 sleep list의 다음 원소로 넘어감
-  //     e = list_next(e);
-  //     update_next_tick_to_awake(tmp->wakeup_time);
-  //   }
-  // }
   struct list_elem *e;
   struct thread *tmp;
 

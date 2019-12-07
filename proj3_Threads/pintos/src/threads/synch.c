@@ -69,8 +69,8 @@ sema_down (struct semaphore *sema)
   while (sema->value == 0) 
     {
       //// user define start - proj3
-      list_push_back (&sema->waiters, &thread_current ()->elem);
-      //list_insert_ordered(&sema->waiters, &thread_current()->elem, sema_pri_more, NULL);
+      //list_push_back (&sema->waiters, &thread_current ()->elem);
+      list_insert_ordered(&sema->waiters, &thread_current()->elem, thread_pri_more, NULL);
       //// user define end
       thread_block ();
     }
@@ -116,10 +116,20 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters)) 
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+  if (!list_empty (&sema->waiters)) {
+    //// user define start - proj3
+    // waiters list에 있는 동안 priority 바뀔 경우를 고려해서 정렬함
+    struct thread *tmp;
+
+    list_sort(&(sema->waiters), thread_pri_more, NULL);
+    tmp = list_entry(list_pop_front(&sema->waiters), struct thread, elem);
+    thread_unblock(tmp); 
+    //// user define end   
+  }
   sema->value++;
+  //// user define start - proj3
+  thread_yield();  
+  //// user define end
   intr_set_level (old_level);
 }
 
@@ -339,15 +349,3 @@ cond_broadcast (struct condition *cond, struct lock *lock)
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
 }
-
-//// user define start - proj3
-bool sema_pri_more(const struct list_elem *a, const struct list_elem *b, void *aux) {
-  bool tf;  	
-  struct semaphore_elem *sema_1 = list_entry(a, struct semaphore_elem, elem);
-  struct semaphore_elem *sema_2 = list_entry(a, struct semaphore_elem, elem);
-
-	//tf = (sema_1->priority > sema_2->priority) ? true : false;
-
-	return tf;
-}
-//// user define end

@@ -89,11 +89,16 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
+  // ticks 시간 동안 sleep 하게 함
   int64_t start = timer_ticks ();
-
+   
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
+  //// user define start - proj3
+  /*while (timer_elapsed (start) < ticks) 
     thread_yield ();
+  */
+  thread_sleep(start + ticks);
+  //// user define end
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -172,6 +177,13 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  //// user define start - proj3
+  // next_tick_to_awake(다음 번에 깨워야 할 시간)이 되면
+  // 해당하는 thread들 awake한다
+  if (next_tick_to_awake <= ticks) {    
+    thread_awake(ticks);
+  }
+  //// user define end
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
