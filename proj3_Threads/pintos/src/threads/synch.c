@@ -68,7 +68,10 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
+      //// user define start - proj3
       list_push_back (&sema->waiters, &thread_current ()->elem);
+      //list_insert_ordered(&sema->waiters, &thread_current()->elem, sema_pri_more, NULL);
+      //// user define end
       thread_block ();
     }
   sema->value--;
@@ -336,3 +339,15 @@ cond_broadcast (struct condition *cond, struct lock *lock)
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
 }
+
+//// user define start - proj3
+bool sema_pri_more(const struct list_elem *a, const struct list_elem *b, void *aux) {
+  bool tf;  	
+  struct semaphore_elem *sema_1 = list_entry(a, struct semaphore_elem, elem);
+  struct semaphore_elem *sema_2 = list_entry(a, struct semaphore_elem, elem);
+
+	//tf = (sema_1->priority > sema_2->priority) ? true : false;
+
+	return tf;
+}
+//// user define end

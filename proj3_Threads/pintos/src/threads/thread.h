@@ -122,9 +122,22 @@ struct thread
 		/* proj2 */
 		struct file *fd[128];
 		/* proj3 */
-		int wakeup_time;
+		int64_t wakeup_time;
 		//// user define end
   };
+
+//// user define start - proj3
+static struct thread *idle_thread;
+static struct list sleep_list;
+//int64_t next_tick_to_awake = INT64_MAX;
+int64_t next_tick_to_awake;
+void thread_sleep(int64_t tick);
+void thread_awake(int64_t tick);
+void update_next_tick_to_awake(int64_t tick);
+int64_t get_next_tick_to_awake(void);
+bool thread_pri_more(const struct list_elem *a, const struct list_elem *b, void *aux);
+void thread_aging(void);
+//// user define end
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.

@@ -29,7 +29,8 @@ static struct list ready_list;
 static struct list all_list;
 
 //// user define start - proj3
-static struct list sleep_list;
+//static struct list sleep_list;
+int64_t next_tick_to_awake = INT64_MAX; // min of wakeup_time of thread in sleep list
 //// user define end
 
 /* Idle thread. */
@@ -101,6 +102,9 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  //// user define start - proj3
+  list_init (&sleep_list);
+  //// user define end
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -152,8 +156,8 @@ thread_tick (void)
 	//thread_wake_up();
 
 	/* Project #3. */
-	//if (thread_prior_aging == true)
-		//thread_aging();
+	if (thread_prior_aging == true)
+		thread_aging();
 #endif
 }
 
@@ -245,7 +249,10 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+  //// user define start - proj3
+  if (priority > p->priority)
+    thread_yield();
+  //// user define end
   return tid;
 }
 
@@ -282,7 +289,10 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  //// user define start - proj3
+  //list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list, &t->elem, thread_pri_more, NULL);
+  //// user define end
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -356,8 +366,11 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+  //// user define start - proj3
+  if (cur != idle_thread) {
+    //list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered(&ready_list, &cur->elem, thread_pri_more, NULL);
+  }  
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -384,7 +397,13 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  //// user define start - proj3
+  //thread_current ()->priority = new_priority;
+  int max_priority = thread_current()->priority;
+  thread_current()->priority = new_priority;
+  if (new_priority < max_priority)
+    thread_yield();
+  //// user define end
 }
 
 /* Returns the current thread's priority. */
@@ -632,3 +651,102 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+//// user define start - proj3
+void thread_sleep(int64_t awake_tick) {
+  // current thread를 awake_tick(일어나야 할 시간)까지 sleep 하게 함
+  struct thread *cur = thread_current();
+  enum intr_level old_level;
+
+  if (cur != idle_thread) {
+    old_level = intr_disable();
+    cur->wakeup_time = awake_tick;
+    list_push_back(&sleep_list, &cur->elem);
+    update_next_tick_to_awake(awake_tick);
+    thread_block();
+    intr_set_level(old_level);
+  }
+}
+
+void thread_awake(int64_t awake_tick) {
+  // sleep list에 있는 thread 중 tick(일어나야 할 시각)이
+  // 지난 thread 들은 list 순회하면서 다 깨움
+  struct list_elem *e;
+  struct thread *tmp;
+
+  for (e = list_begin(&sleep_list); e != list_end(&sleep_list); ) {
+    tmp = list_entry(e, struct thread, elem);
+    if (awake_tick >= tmp->wakeup_time) {
+      // 깨워야 될 thread면 sleep list에서 제거하고 깨움
+      e = list_remove(&tmp->elem);
+      thread_unblock(tmp);
+    }
+    else {
+      // 아니면 sleep list의 다음 원소로 넘어감
+      e = list_next(e);
+      update_next_tick_to_awake(tmp->wakeup_time);
+    }
+  }
+}
+
+void update_next_tick_to_awake(int64_t tick) {
+  // 다음번에 깨워야할 tick 시간 업뎃
+  if (tick < next_tick_to_awake)
+    next_tick_to_awake = tick;
+}
+
+// int64_t get_next_tick_to_awake(void) {
+//   // 다음 번에 깨워야 할 tick 시간 가져오기
+//   return next_tick_to_awake;
+// }
+
+bool thread_pri_more(const struct list_elem *a, const struct list_elem *b, void *aux) {
+  bool tf;  	
+  struct thread *thread_1 = list_entry(a, struct thread, elem);
+  struct thread *thread_2 = list_entry(b, struct thread, elem);
+
+	tf = (thread_1->priority > thread_2->priority) ? true : false;
+
+	return tf;
+}
+
+void thread_aging(void) {
+  // struct thread *cur = thread_current();
+  // enum intr_level old_level;
+
+  // if (cur != idle_thread) {
+  //   old_level = intr_disable();
+  //   cur->wakeup_time = awake_tick;
+  //   list_push_back(&sleep_list, &cur->elem);
+  //   update_next_tick_to_awake(awake_tick);
+  //   thread_block();
+  //   intr_set_level(old_level);
+  // }
+
+  // struct list_elem *e;
+  // struct thread *tmp;
+
+  // for (e = list_begin(&sleep_list); e != list_end(&sleep_list); ) {
+  //   tmp = list_entry(e, struct thread, elem);
+  //   if (awake_tick >= tmp->wakeup_time) {
+  //     // 깨워야 될 thread면 sleep list에서 제거하고 깨움
+  //     e = list_remove(&tmp->elem);
+  //     thread_unblock(tmp);
+  //   }
+  //   else {
+  //     // 아니면 sleep list의 다음 원소로 넘어감
+  //     e = list_next(e);
+  //     update_next_tick_to_awake(tmp->wakeup_time);
+  //   }
+  // }
+  struct list_elem *e;
+  struct thread *tmp;
+
+  for (e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e)) {
+    tmp = list_entry(e, struct thread, elem);
+    tmp->priority++;
+  }
+}
+
+
+//// user define end
