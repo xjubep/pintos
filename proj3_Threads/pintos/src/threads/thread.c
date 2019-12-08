@@ -31,6 +31,7 @@ static struct list all_list;
 //// user define start - proj3
 //static struct list sleep_list;
 int64_t next_tick_to_awake = INT64_MAX; // min of wakeup_time of thread in sleep list
+int load_avg;
 //// user define end
 
 /* Idle thread. */
@@ -122,6 +123,9 @@ thread_start (void)
   struct semaphore start_idle;
   sema_init (&start_idle, 0);
   thread_create ("idle", PRI_MIN, idle, &start_idle);
+  //// user define start - proj3
+  load_avg = LOAD_AVG_DEFAULT;
+  //// user define end
 
   /* Start preemptive thread scheduling. */
   intr_enable ();
@@ -394,17 +398,17 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+//// user define start - proj3
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
 {
-  //// user define start - proj3
-  //thread_current ()->priority = new_priority;
+  if (thread_mlfqs)
+    return;
   int max_priority = thread_current()->priority;
   thread_current()->priority = new_priority;
   if (new_priority < max_priority)
     thread_yield();
-  //// user define end
 }
 
 /* Returns the current thread's priority. */
@@ -417,33 +421,54 @@ thread_get_priority (void)
 /* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int nice UNUSED) 
-{
-  /* Not yet implemented. */
+{  
+  struct thread *cur = thread_current();
+  enum intr_level old_level;
+
+  old_level = intr_disable();
+  cur->nice = nice;
+//  
+  // int max_priority = thread_current()->priority;
+  // thread_current()->priority = new_priority;
+  // if (new_priority < max_priority)
+  //   thread_yield();
+//
+  intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  enum intr_level old_level = intr_disable();
+  int tmp_nice = thread_current()->nice;
+  intr_set_level(old_level);
+
+  return tmp_nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  enum intr_level old_level = intr_disable();
+  int tmp_load_avg = load_avg * 100;
+  intr_set_level(old_level);
+
+  return tmp_load_avg;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  enum intr_level old_level = intr_disable();
+  int tmp_recent_cpu = thread_current()->recent_cpu * 100;
+  intr_set_level(old_level);
+
+  return tmp_recent_cpu;
 }
+//// user define end
 
 /* Idle thread.  Executes when no other thread is ready to run.
 
@@ -532,8 +557,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
 
-	//// user define start
+	//// user define start - proj1,3
 	list_init(&(t->child_list));
+  t->nice = NICE_DEFAULT;
+  t->recent_cpu = RECENT_CPU_DEFAULT;
 	//// user define end
 }
 
@@ -716,5 +743,40 @@ void thread_aging(void) {
   }
 }
 
+int i_to_f(int n) {
+
+}
+
+int f_to_i(int x) {
+
+}
+
+int f_add_f(int x, int y) {
+  return x+y;
+}
+
+int f_add_i(int x, int n) {
+
+}
+
+int f_sub_f(int x, int y) {
+  return x-y;
+}
+
+int f_sub_i(int x, int n) {
+
+}
+int f_mul_f(int x, int y) {
+
+}
+int f_mul_i(int x, int n) {
+
+}
+int f_div_f(int x, int y) {
+
+}
+int f_div_i(int x, int n) {
+
+}
 
 //// user define end

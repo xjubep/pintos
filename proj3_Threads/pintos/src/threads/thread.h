@@ -32,6 +32,13 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+//// user define start - proj3
+#define NICE_MIN -20
+#define NICE_DEFAULT 0
+#define NICE_MAX 20
+#define RECENT_CPU_DEFAULT 0
+#define LOAD_AVG_DEFAULT 0
+//// user define end
 
 /* A kernel thread or user process.
 
@@ -123,18 +130,17 @@ struct thread
 		struct file *fd[128];
 		/* proj3 */
 		int64_t wakeup_time;
+    int nice;
+    int recent_cpu;
 		//// user define end
   };
 
 //// user define start - proj3
-static struct thread *idle_thread;
-static struct list sleep_list;
-//int64_t next_tick_to_awake = INT64_MAX;
+struct list sleep_list;
 int64_t next_tick_to_awake;
 void thread_sleep(int64_t tick);
 void thread_awake(int64_t tick);
 void update_next_tick_to_awake(int64_t tick);
-int64_t get_next_tick_to_awake(void);
 bool thread_pri_more(const struct list_elem *a, const struct list_elem *b, void *aux);
 void thread_aging(void);
 //// user define end

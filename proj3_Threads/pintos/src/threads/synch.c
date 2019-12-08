@@ -128,7 +128,7 @@ sema_up (struct semaphore *sema)
   }
   sema->value++;
   //// user define start - proj3
-  thread_yield();  
+  thread_yield();
   //// user define end
   intr_set_level (old_level);
 }
